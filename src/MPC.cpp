@@ -7,7 +7,7 @@ using CppAD::AD;
 
 // TODO: Set the timestep length and duration
 size_t N = 10;
-double dt = 1;
+double dt = 0.3;
 
 // This value assumes the model presented in the classroom is used.
 //
@@ -20,6 +20,7 @@ double dt = 1;
 //
 // This is the length from front to CoG that has a similar radius.
 const double Lf = 2.67;
+const double ref_v = 15;
 
 // when one variable starts and another ends to make our lifes easier.
 size_t x_start = 0;
@@ -51,6 +52,7 @@ class FG_eval {
     {
       fg[0] += 100 * pow(vars[cte_start + c],2);
       fg[0] += 100 * pow(vars[epsi_start + c], 2);
+      fg[0] += 5 * pow(vars[v_start + c] - ref_v, 2);
     }
 
         // Minimize the use of actuators.
@@ -93,8 +95,8 @@ class FG_eval {
       AD<double> del0 = vars[delta_start + t - 1];
       AD<double> a0 = vars[a_start + t - 1];
 
-      AD<double> f0 = coeffs[0] + coeffs[1] * x0;
-      AD<double> psides0 = CppAD::atan(coeffs[1]);
+      AD<double> f0 = coeffs[0] + (coeffs[1] * x0) + (coeffs[2] * pow(x0, 2)) + (coeffs[3] * pow(x0, 3));
+      AD<double> psides0 = CppAD::atan(coeffs[1] + 2 * coeffs[2] * x0 + 3 * coeffs[3] * x0 * x0);
       
       // Here's `x` to get you started.
       // The idea here is to constraint this value to be 0.
@@ -170,11 +172,7 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
   }
 
   // v_start
-    for (int i = v_start; i < cte_start; i++) 
-  {
-    vars_lowerbound[i] = 3.0;
-    vars_upperbound[i] = 12.0;
-  }
+
 
   // The upper and lower limits of delta are set to -25 and 25
   // degrees (values in radians).
